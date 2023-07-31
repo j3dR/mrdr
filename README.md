@@ -1,6 +1,12 @@
-# mrdr
-
-## Installation
+# Installation
     git clone https://github.com/j3dR/mrdr.git
     cd mrdr
-    sudo cp mrdr /usr/bin
+    cp mrdr /usr/bin
+
+# Usage
+To kill process(es):
+    mrdr process-name
+Show help:
+    mrdr --help
+or
+    mrdr -h
