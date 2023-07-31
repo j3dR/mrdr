@@ -5,8 +5,8 @@
 
 # Usage
 To kill process(es):
-\n`mrdr process-name`
+`mrdr process-name`  
 Show help:
-\n`mrdr --help`
+`mrdr --help`  
 or
-\n`mrdr -h`
+`mrdr -h`
