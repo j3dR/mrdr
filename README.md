@@ -4,8 +4,6 @@
     cp mrdr /usr/bin
 
 # Usage
-To kill process(es):  
-`mrdr process-name`  
+To kill process(es): `mrdr process-name`  
 
-Show help:  
-`mrdr --help` or `mrdr -h`
+Show help: `mrdr --help` or `mrdr -h`
