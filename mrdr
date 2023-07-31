@@ -1,0 +1,153 @@
+#! /bin/bash
+
+NAME="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"  # script name
+
+if [ $# == 0 ]
+then
+    echo "$NAME: No arguments specified" >&2
+    exit 1
+fi
+
+# Show help message and exit
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]
+then
+	echo "$NAME: $NAME [-h or --help show this message and exit] process-name"
+	echo
+	echo "      If there are multiple processes with the same name, the prompt will ask you which process(es) you want to kill"
+	echo "      Type the ID number (not the PID!) associated with each process to kill the one(s) you have chosen"
+	echo "      To kill all processes simply type 'all'"
+	echo "      To abort just press Enter or Ctrl+C"
+
+	exit
+fi
+
+# Check for errors
+
+is_transaction_ok=true
+
+for (( i=1; i<=$#; i++ ))
+do
+	# Empty arguments
+	if test -z "${!i}"
+    then
+        echo "$NAME: Argument $i is empty" >&2
+        is_transaction_ok=false
+        continue
+    fi
+
+	# Wrong process names
+	if test -z "$(ps -C "${!i}" | awk 'NR==2 {print $(!i)}')"
+    then
+        echo "$NAME: No process named '${!i}'" >&2
+        is_transaction_ok=false
+        continue
+    fi
+
+	num_of_pids=$(($(ps -C "${!i}" | tr -cd '${!i}' | wc -c)))
+
+	# Check priveleges
+    if [ $num_of_pids -gt 1 ]  # multiple processes with the same name
+	then
+		for (( j=2; j<num_of_pids+2; j++ ))
+		do
+			pid=$(($(ps -C "${!i}" | awk -v l=$j 'NR==l {print $(!i)}')))
+
+			if [ "$(ps -o user= -p "$pid")" == "root" ] && [ "$EUID" != 0 ]
+			then
+				echo "$NAME: No priveleges to kill process '${!i}' (PID: $pid)" >&2
+				is_transaction_ok=false
+			fi
+		done
+	else                       # single process
+		pid=$(ps -C "${!i}" | awk 'NR==2 {print $(!i)}')
+
+		if [ "$(ps -o user= -p "$pid")" == "root" ] && [ "$EUID" != 0 ]
+    	then
+	    	echo "$NAME: No priveleges to kill process '${!i}' (PID: $pid)" >&2
+	    	is_transaction_ok=false
+    	fi
+	fi
+done
+
+if [ $is_transaction_ok == false ]
+then
+	echo "$NAME: Transaction failed, no process was killed" >&2
+    exit 2
+fi
+
+
+# Main loop 
+for (( i=1; i<=$#; i++ ))
+do  
+    num_of_pids=$(($(ps -C "${!i}" | tr -cd '${!i}' | wc -c)))
+
+    if [ $num_of_pids -gt 1 ]  # multiple processes with the same name
+    then
+        n=""
+        echo "$NAME: There are $num_of_pids processes named '${!i}':"
+		ps -C "${!i}" | cut -c4- | nl -v1 -s " -> " -b p"${!i}" | sed 's/^/ /'  # show said processes
+
+        is_num_ok=false
+
+        while [ $is_num_ok == false ]
+        do
+            is_num_ok=true
+
+            read -rp "      Which of them you want to kill: " n
+
+            n_array=($n)
+            
+            for (( j=0; j<${#n_array[@]}; j++ ))
+            do
+				if [ "${n_array[$j]}" == "all" ]                                                  # kill all processes
+				then
+					pids_array=()
+
+					for (( k=2; k<num_of_pids + 2; k++ ))
+					do
+						pids_array[k - 2]=$(($(ps -C "${!i}" | awk -v l=$k 'NR==l {print $(!i)}')))
+					done
+
+					for (( k=0; k<${#pids_array[@]}; k++))
+					do
+						kill "${pids_array[$k]}"
+					done
+
+					exit
+				elif ! [[ "${n_array[$j]}" =~ ^[0-9]+$ ]]                                         # check for the letters
+				then
+					echo "      No option '${n_array[$j]}'"
+                    is_num_ok=false	
+				else
+					if [ $((${n_array[$j]})) -lt 1 ] || [ $((${n_array[$j]})) -gt $num_of_pids ]  # number out of bounds
+					then
+						if [ "${n_array[$j]}" != "" ]  # abort if empty
+						then
+							echo "      No option '${n_array[$j]}'"
+							is_num_ok=false
+						else
+							exit
+						fi
+					fi	
+				fi
+            done
+        done
+
+		# Get PIDs from the names
+
+        pids_array=()
+
+        for (( j=0; j<${#n_array[@]}; j++ ))
+        do
+            pids_array[j]=$(ps -C "${!i}" | awk -v "n=$((${n_array[$j]} + 1))" 'NR==n {print $(!i)}')
+        done
+
+        for (( j=0; j<${#pids_array[@]}; j++ ))
+        do 
+			kill $((${pids_array[$j]})) 
+        done
+    else                       # single process
+        kill "$(ps -C "${!i}" | awk 'NR==2 {print $(!i)}')"
+    fi
+done
+
