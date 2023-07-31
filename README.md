@@ -6,5 +6,6 @@
 # Usage
 To kill process(es):  
 `mrdr process-name`  
+
 Show help:  
 `mrdr --help` or `mrdr -h`
