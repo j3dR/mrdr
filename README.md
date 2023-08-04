@@ -1,5 +1,5 @@
 # Installation
-    git clone https://github.com/j3dR/mrdr.git`
+    git clone https://github.com/j3dR/mrdr.git
     cd mrdr
     chmod +x mrdr
     cp mrdr /usr/bin
