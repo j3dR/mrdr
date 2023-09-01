@@ -2,7 +2,7 @@
     git clone https://github.com/j3dR/mrdr.git
     cd mrdr
     chmod +x mrdr
-    cp mrdr /usr/bin
+    sudo cp mrdr /usr/bin
 
 # Usage
 To kill process(es): `mrdr process-name`  
